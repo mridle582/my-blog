@@ -12,8 +12,6 @@ const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rho
 
 const app = express();
 
-// const posts = [];
-
 app.set('view engine', 'ejs');
 
 app.use(bodyParser.urlencoded({
@@ -60,17 +58,18 @@ app.get("/compose", (req, res) => {
     res.render("compose");
 });
 
-app.get("/posts/:postTitle", (req, res) => {
-    const qPostName = _.lowerCase(req.params.postTitle);
+app.get("/posts/:postId", (req, res) => {
+    console.log(req.params);
+    const qPostId = req.params.postId;
 
     Post.findOne({
-        title: qPostName
+        _id: qPostId
     }, (err, qPost) => {
         console.log(qPost);
         if (err) {
             console.log(err);
         } else {
-            if (qPost === null) {
+            if (!qPost) {
                 res.render("post", {
                     postTitle: "Ooops!",
                     postBody: "Could not find the desired page, please try again."
@@ -95,6 +94,6 @@ app.post("/compose", (req, res) => {
     });
 });
 
-app.listen(3000, function () {
+app.listen(3000,  () => {
     console.log("Server started on port 3000");
 });
