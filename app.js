@@ -1,6 +1,9 @@
+require("dotenv").config();
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
+const mongoose = require("mongoose");
 const _ = require("lodash");
 
 const homeStartingContent = "Lacus vel facilisis volutpat est velit egestas dui id ornare. Semper auctor neque vitae tempus quam. Sit amet cursus sit amet dictum sit amet justo. Viverra tellus in hac habitasse. Imperdiet proin fermentum leo vel orci porta. Donec ultrices tincidunt arcu non sodales neque sodales ut. Mattis molestie a iaculis at erat pellentesque adipiscing. Magnis dis parturient montes nascetur ridiculus mus mauris vitae ultricies. Adipiscing elit ut aliquam purus sit amet luctus venenatis lectus. Ultrices vitae auctor eu augue ut lectus arcu bibendum at. Odio euismod lacinia at quis risus sed vulputate odio ut. Cursus mattis molestie a iaculis at erat pellentesque adipiscing.";
@@ -9,72 +12,89 @@ const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rho
 
 const app = express();
 
-const posts = [];
+// const posts = [];
 
 app.set('view engine', 'ejs');
 
 app.use(bodyParser.urlencoded({
-  extended: true
+    extended: true
 }));
+
 app.use(express.static("public"));
 
-app.get("/", (req, res) => {
+mongoose.connect(`${process.env.MONGODB_URL}/myblogDB`);
 
-  res.render("home", {
-    initHomeText: homeStartingContent,
-    blogPosts: posts
-  });
+const postsSchema = {
+    title: String,
+    body: String
+};
+
+const Post = mongoose.model("Post", postsSchema);
+
+app.get("/", (req, res) => {
+    Post.find({}, (err, foundPosts) => {
+        if (err) {
+            console.log(err);
+        } else {
+            res.render("home", {
+                initHomeText: homeStartingContent,
+                blogPosts: foundPosts
+            });
+        }
+    });
 });
 
 app.get("/about", (req, res) => {
-  res.render("about", {
-    aboutText: aboutContent
-  });
+    res.render("about", {
+        aboutText: aboutContent
+    });
 });
 
 app.get("/contact", (req, res) => {
-  res.render("contact", {
-    contactText: contactContent
-  });
+    res.render("contact", {
+        contactText: contactContent
+    });
 });
 
 app.get("/compose", (req, res) => {
-  res.render("compose");
+    res.render("compose");
 });
 
 app.get("/posts/:postTitle", (req, res) => {
-  const qPost = _.lowerCase(req.params.postTitle);
-  let pageFound = false;
+    const qPostName = _.lowerCase(req.params.postTitle);
 
-  posts.forEach(post => {
-    const pPost = _.lowerCase(post.title);
-    if (pPost === qPost) {
-      pageFound = true;
-      res.render("post", {
-        postTitle: post.title,
-        postBody: post.body
-      })
-    }
-  });
-
-  if (!pageFound) {
-    res.render("post", {
-      postTitle: "Ooops!",
-      postBody: "Could not find the desired page, please try again."
-    })
-  }
-
+    Post.findOne({
+        title: qPostName
+    }, (err, qPost) => {
+        console.log(qPost);
+        if (err) {
+            console.log(err);
+        } else {
+            if (qPost === null) {
+                res.render("post", {
+                    postTitle: "Ooops!",
+                    postBody: "Could not find the desired page, please try again."
+                });
+            }else {
+                res.render("post", {
+                    postTitle: qPost.title,
+                    postBody: qPost.body
+                });
+            }
+        }
+    });
 });
 
 app.post("/compose", (req, res) => {
-  const post = {
-    title: req.body.postTitle,
-    body: req.body.postBody
-  };
-  posts.push(post);
-  res.redirect("/");
+    const post = new Post({
+        title: req.body.postTitle,
+        body: req.body.postBody
+    });
+    post.save((err) => {
+        err ? console.log(err) : res.redirect("/");
+    });
 });
 
 app.listen(3000, function () {
-  console.log("Server started on port 3000");
+    console.log("Server started on port 3000");
 });
